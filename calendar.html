@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Exact Match Calendar</title>
 
-    <!-- Confetti Effect-->>
+    <!-- Confetti Effect-->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 
 
@@ -235,64 +235,48 @@
                 prevDateElement.style.opacity = '0.5'; // Dimmed effect for previous month's days
                 calendar.appendChild(prevDateElement);
             }
-
             // Add current month's days to the calendar
-            for (let day = 1; day <= lastDate; day++) {
-                const dateElement = document.createElement('div');
-                dateElement.className = 'calendar-date';
+for (let day = 1; day <= lastDate; day++) {
+    const dateElement = document.createElement('div');
+    dateElement.className = 'calendar-date';
 
-                // Highlight today's date
-                if (day === currentDate.getDate() && month === currentDate.getMonth() && year === currentDate.getFullYear()) {
-                    dateElement.classList.add('active');
-                }
+    // Highlight today's date
+    if (day === currentDate.getDate() && month === currentDate.getMonth() && year === currentDate.getFullYear()) {
+        dateElement.classList.add('active');
+    }
 
-                dateElement.innerText = day;
+    dateElement.innerText = day;
 
-                // Automatically add a specific event to October 17th, 2024
-                if (year === 2024 && month === 9 && day === 17) {
-                    dateElement.setAttribute('data-event', 'LV Robotics Event: 5:30 PM at Pololu');
-                    dateElement.innerHTML = `<strong>${day}</strong><br>LV Robotics Event`;
-                    dateElement.classList.add('has-event');
-                }
+    // Only add a specific event to October 17th, 2024
+    if (year === 2024 && month === 9 && day === 17) {
+        dateElement.setAttribute('data-event', 'LV Robotics Event: 5:30 PM at Pololu');
+        dateElement.innerHTML = `<strong>${day}</strong><br>LV Robotics Event`;
+        dateElement.classList.add('has-event');
 
-                // Allow user to add custom events by clicking on a date
-                dateElement.addEventListener('click', () => {
-                    const event = prompt('Enter event description:');
-                    const eventTime = prompt('Enter event time (HH:MM, 24-hour format):');
+        // Allow event interaction only for October 17th
+        dateElement.addEventListener('click', () => {
+            // Generate a Google Calendar link for the event
+            const event = 'LV Robotics Event';
+            const eventStartDateTime = `20241017T173000Z`; // Set specific start time
+            const eventEndDateTime = `20241017T183000Z`;   // Set specific end time (1 hour later)
+            const calendarLink = getGoogleCalendarLink(event, eventStartDateTime, eventEndDateTime, 'Pololu, Las Vegas', 'Event: LV Robotics at 5:30 PM');
 
-                    // Validate time input
-                    if (event !== null && eventTime !== null) {
-                        const [hour, minute] = eventTime.split(':').map(Number);
-                        if (isNaN(hour) || isNaN(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
-                            alert('Please enter a valid time in HH:MM format.');
-                            return;
-                        }
+            // Show the Google Calendar link
+            dateElement.innerHTML += `<br><a href="${calendarLink}" target="_blank">Add to Google Calendar</a>`;
 
-                        // Create a key for the event (YYYY-MM-DD format)
-                        const dateKey = `${year}-${zeroPad(month + 1)}-${zeroPad(day)}`;
-                        events[dateKey] = `${event} at ${eventTime}`; // Store the event
+            // Add confetti effect here
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }  // Adjust the confetti position
+            });
+        });
+    }
 
-                        // Update the calendar cell with the event
-                        dateElement.setAttribute('data-event', event);
-                        dateElement.innerHTML = `<strong>${day}</strong><br>${event} at ${eventTime}`;
+    calendar.appendChild(dateElement);
+}
 
-                        // Add confetti effect here
-                        confetti({
-                            particleCount: 100,
-                            spread: 70,
-                            origin: { y: 0.6 }  // Adjust the confetti position
-                        });
 
-                        // Generate a Google Calendar link for the event
-                        const eventStartDateTime = `${year}${zeroPad(month + 1)}${zeroPad(day)}T${zeroPad(hour)}${zeroPad(minute)}00Z`;
-                        const eventEndDateTime = `${year}${zeroPad(month + 1)}${zeroPad(day)}T${zeroPad(hour + 1)}${zeroPad(minute)}00Z`;
-                        const calendarLink = getGoogleCalendarLink(event, eventStartDateTime, eventEndDateTime, 'Custom Location', 'Event added by user');
-                        dateElement.innerHTML += `<br><a href="${calendarLink}" target="_blank">Add to Google Calendar</a>`;
-                    }
-                });
-
-                calendar.appendChild(dateElement);
-            }
 
             // Add the first few days of the next month to fill the grid (if necessary)
             const totalDays = firstDay + lastDate;
