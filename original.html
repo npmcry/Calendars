@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exact Match Calendar</title>
+    <style>
+        body {
+            background-color: transparent;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .calendar-container {
+            width: 100%;
+            max-width: 900px;
+            padding: 20px;
+            color: #000;
+            background-color: transparent;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .nav-btn-group {
+            display: flex;
+            gap: 5px; /* Small gap between the navigation buttons */
+        }
+
+        .nav-btn {
+            background-color: #f0f0f0; /* Light background for buttons */
+            border: none;
+            color: #007bff; /* Blue color for arrows */
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px; /* Slightly larger font size for arrows */
+        }
+
+        #monthYear {
+            color: white; /* Change month title to white */
+            font-size: 24px; /* Adjust font size if necessary */
+        }
+
+        .calendar-controls {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+
+        .view-btn {
+            background-color: #f9f9f9; /* Light blue closer to white */
+            border: none;
+            color: #007bff; /* Blue text color */
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 5px;
+        }
+
+        .view-btn.active {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0; /* Remove gap to avoid additional lines */
+            background-color: #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .calendar-day, .calendar-date {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid rgba(224, 224, 224, 0.3); /* Thinner, lighter lines */
+            border-width: 0.5px; /* Thinnest possible width */
+            border-radius: 0;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        .calendar-day {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+            border: none;
+        }
+
+        .calendar-date {
+            background-color: white;
+            color: #000;
+            height: 100px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .calendar-date.active {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .calendar-date:hover {
+            background-color: #e6f0ff;
+        }
+
+        .calendar-date[data-event]:hover::after {
+            content: attr(data-event);
+            display: block;
+            position: absolute;
+            top: -20px;
+            left: 0;
+            right: 0;
+            padding: 5px;
+            background: #007bff;
+            color: #fff;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .calendar-container button:focus {
+            outline: none;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <div class="nav-btn-group">
+                <button class="nav-btn" id="prevMonth">&lt;</button>
+                <button class="nav-btn" id="nextMonth">&gt;</button>
+            </div>
+            <h2 id="monthYear"></h2>
+            <button class="nav-btn" id="todayBtn">Today</button>
+        </div>
+        <div class="calendar-controls">
+            <button class="view-btn" id="dayView">Day</button>
+            <button class="view-btn" id="weekView">Week</button>
+            <button class="view-btn active" id="monthView">Month</button>
+            <button class="view-btn" id="listView">List</button>
+        </div>
+        <div class="calendar" id="calendar">
+            <!-- Days of the week will be generated here -->
+        </div>
+    </div>
+    <script>
+        const monthYear = document.getElementById('monthYear');
+        const calendar = document.getElementById('calendar');
+        const prevMonthBtn = document.getElementById('prevMonth');
+        const nextMonthBtn = document.getElementById('nextMonth');
+        const todayBtn = document.getElementById('todayBtn');
+
+        let currentDate = new Date();
+
+        function renderCalendar(date) {
+            const month = date.getMonth();
+            const year = date.getFullYear();
+            const firstDay = new Date(year, month, 1).getDay();
+            const lastDate = new Date(year, month + 1, 0).getDate();
+            const prevLastDate = new Date(year, month, 0).getDate();
+
+            // Set the month and year in the header
+            monthYear.innerText = `${date.toLocaleString('default', { month: 'long' })} ${year}`;
+
+            // Clear the existing calendar content
+            calendar.innerHTML = '';
+
+            // Create day labels (Sun, Mon, etc.)
+            const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            for (let day of daysOfWeek) {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                dayElement.innerText = day;
+                calendar.appendChild(dayElement);
+            }
+
+            // Add previous month's last days if the month doesn't start on Sunday
+            for (let i = firstDay; i > 0; i--) {
+                const prevDateElement = document.createElement('div');
+                prevDateElement.className = 'calendar-date';
+                prevDateElement.innerText = prevLastDate - i + 1;
+                prevDateElement.style.opacity = '0.5';
+                calendar.appendChild(prevDateElement);
+            }
+
+            // Add current month's days
+            for (let day = 1; day <= lastDate; day++) {
+                const dateElement = document.createElement('div');
+                dateElement.className = 'calendar-date';
+                if (day === currentDate.getDate() && month === currentDate.getMonth() && year === currentDate.getFullYear()) {
+                    dateElement.classList.add('active');
+                }
+                dateElement.innerText = day;
+                calendar.appendChild(dateElement);
+
+                // Add event handling for adding/editing events
+                dateElement.addEventListener('click', () => {
+                    const event = prompt('Enter event description:');
+                    if (event !== null) {
+                        dateElement.setAttribute('data-event', event);
+                    }
+                });
+            }
+
+            // Add next month's first days to fill out the grid, but limit to 5 days
+            const totalDays = firstDay + lastDate;
+            for (let i = 1; i <= 5 && totalDays + i <= 42; i++) {
+                const nextDateElement = document.createElement('div');
+                nextDateElement.className = 'calendar-date';
+                nextDateElement.innerText = i;
+                nextDateElement.style.opacity = '0.5';
+                calendar.appendChild(nextDateElement);
+            }
+        }
+
+        prevMonthBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar(currentDate);
+        });
+
+        nextMonthBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar(currentDate);
+        });
+
+        todayBtn.addEventListener('click', () => {
+            currentDate = new Date();
+            renderCalendar(currentDate);
+        });
+
+        // Initial render of the calendar
+        renderCalendar(currentDate);
+
+        // Adding functionality to the view buttons
+        document.getElementById('dayView').addEventListener('click', () => {
+            renderDayView();
+            setActiveView('dayView');
+        });
+
+        document.getElementById('weekView').addEventListener('click', () => {
+            renderWeekView();
+            setActiveView('weekView');
+        });
+
+        document.getElementById('monthView').addEventListener('click', () => {
+            renderCalendar(currentDate);
+            setActiveView('monthView');
+        });
+
+        document.getElementById('listView').addEventListener('click', () => {
+            renderListView();
+            setActiveView('listView');
+        });
+
+        function setActiveView(viewId) {
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(viewId).classList.add('active');
+        }
+
+        function renderDayView() {
+            calendar.innerHTML = '';
+            const dayElement = document.createElement('div');
+            dayElement.className = 'calendar-date';
+            dayElement.style.height = '500px';
+            dayElement.innerText = `Events for ${currentDate.toDateString()}`;
+            calendar.appendChild(dayElement);
+        }
+
+        function renderWeekView() {
+            calendar.innerHTML = '';
+            const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            daysOfWeek.forEach(day => {
+                const weekElement = document.createElement('div');
+                weekElement.className = 'calendar-date';
+                weekElement.style.height = '100px';
+                weekElement.innerText = `${day}: No Events`;
+                calendar.appendChild(weekElement);
+            });
+        }
+
+        function renderListView() {
+            calendar.innerHTML = '';
+            const listElement = document.createElement('div');
+            listElement.style.padding = '20px';
+            listElement.innerHTML = `<strong>Event List for ${currentDate.toLocaleString('default', { month: 'long' })}:</strong><br>No events scheduled.`;
+            calendar.appendChild(listElement);
+        }
+
+    </script>
+</body>
+</html>

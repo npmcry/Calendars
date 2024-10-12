@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Meta tags for character encoding and viewport settings for mobile responsiveness -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exact Match Calendar</title>
+
+    <!-- Confetti Effect-->>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+
+
+    <style>
+        /* Basic styling for the body */
+        body {
+            background-color: transparent;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* Container that holds the calendar */
+        .calendar-container {
+            width: 100%;
+            max-width: 900px;
+            padding: 20px;
+            color: #000;
+            background-color: transparent;
+        }
+
+        /* Header for the calendar including navigation buttons */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        /* Navigation button group (Previous, Next) */
+        .nav-btn-group {
+            display: flex;
+            gap: 5px;
+        }
+
+        /* Styling for navigation buttons */
+        .nav-btn {
+            background-color: #f0f0f0;
+            border: none;
+            color: #007bff;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        /* Styling for the month/year title */
+        #monthYear {
+            color: white;
+            font-size: 24px;
+        }
+
+        /* Controls for switching between day, week, month, and list views */
+        .calendar-controls {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+
+        /* View buttons (Day, Week, Month, List) */
+        .view-btn {
+            background-color: #f9f9f9;
+            border: none;
+            color: #007bff;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 5px;
+        }
+
+        /* Active view button (highlighted) */
+        .view-btn.active {
+            background-color: #007bff;
+            color: white;
+        }
+
+        /* Main grid for the calendar layout */
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0;
+            background-color: #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        /* Common styles for days of the week and calendar dates */
+        .calendar-day,
+        .calendar-date {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid rgba(224, 224, 224, 0.3);
+            border-width: 0.5px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        /* Styling for day labels (e.g., Sun, Mon) */
+        .calendar-day {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+
+        /* Styling for individual dates in the calendar */
+        .calendar-date {
+            background-color: white;
+            color: #000;
+            height: 100px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        /* Active date (highlighting today's date) */
+        .calendar-date.active {
+            background-color: #007bff;
+            color: white;
+        }
+
+        /* Hover effect on calendar dates */
+        .calendar-date:hover {
+            background-color: #e6f0ff;
+        }
+
+        /* Tooltip styling for calendar events */
+        .calendar-date[data-event]:hover::after {
+            content: attr(data-event);
+            display: block;
+            position: absolute;
+            top: -20px;
+            left: 0;
+            right: 0;
+            padding: 5px;
+            background: #007bff;
+            color: #fff;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        /* Focus styles for buttons */
+        .calendar-container button:focus {
+            outline: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <!-- Navigation buttons (Previous, Next month) -->
+            <div class="nav-btn-group">
+                <button class="nav-btn" id="prevMonth">&lt;</button>
+                <button class="nav-btn" id="nextMonth">&gt;</button>
+            </div>
+
+            <!-- Month and year display -->
+            <h2 id="monthYear"></h2>
+
+            <!-- Button to go back to today's date -->
+            <button class="nav-btn" id="todayBtn">Today</button>
+        </div>
+
+        <!-- Buttons to switch between different calendar views -->
+        <div class="calendar-controls">
+            <button class="view-btn" id="dayView">Day</button>
+            <button class="view-btn" id="weekView">Week</button>
+            <button class="view-btn active" id="monthView">Month</button>
+            <button class="view-btn" id="listView">List</button>
+        </div>
+
+        <!-- Calendar grid where dates and events will be displayed -->
+        <div class="calendar" id="calendar"></div>
+    </div>
+
+    <script>
+
+        let events = {}; // Object to store events with dates as keys
+
+        // DOM elements for the calendar
+        const monthYear = document.getElementById('monthYear');
+        const calendar = document.getElementById('calendar');
+        const prevMonthBtn = document.getElementById('prevMonth');
+        const nextMonthBtn = document.getElementById('nextMonth');
+        const todayBtn = document.getElementById('todayBtn');
+
+        let currentDate = new Date(); // Set the current date
+
+        // Function to add leading zero to single-digit numbers
+        function zeroPad(value) {
+            return value.toString().padStart(2, '0');  // Ensures double-digit format
+        }
+
+        // Main function to render the calendar for the current month
+        function renderCalendar(date) {
+            const month = date.getMonth();
+            const year = date.getFullYear();
+            const firstDay = new Date(year, month, 1).getDay(); // Find the day of the week the month starts on
+            const lastDate = new Date(year, month + 1, 0).getDate(); // Get the last date of the month
+            const prevLastDate = new Date(year, month, 0).getDate(); // Get last date of the previous month
+
+            // Display the current month and year in the header
+            monthYear.innerText = `${date.toLocaleString('default', { month: 'long' })} ${year}`;
+            calendar.innerHTML = ''; // Clear the calendar grid
+
+            // Add the days of the week to the calendar grid (Sun, Mon, etc.)
+            const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            for (let day of daysOfWeek) {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                dayElement.innerText = day;
+                calendar.appendChild(dayElement);
+            }
+
+            // Add the last few days of the previous month if the first day isn't Sunday
+            for (let i = firstDay; i > 0; i--) {
+                const prevDateElement = document.createElement('div');
+                prevDateElement.className = 'calendar-date';
+                prevDateElement.innerText = prevLastDate - i + 1;
+                prevDateElement.style.opacity = '0.5'; // Dimmed effect for previous month's days
+                calendar.appendChild(prevDateElement);
+            }
+
+            // Add current month's days to the calendar
+            for (let day = 1; day <= lastDate; day++) {
+                const dateElement = document.createElement('div');
+                dateElement.className = 'calendar-date';
+
+                // Highlight today's date
+                if (day === currentDate.getDate() && month === currentDate.getMonth() && year === currentDate.getFullYear()) {
+                    dateElement.classList.add('active');
+                }
+
+                dateElement.innerText = day;
+
+                // Automatically add a specific event to October 17th, 2024
+                if (year === 2024 && month === 9 && day === 17) {
+                    dateElement.setAttribute('data-event', 'LV Robotics Event: 5:30 PM at Pololu');
+                    dateElement.innerHTML = `<strong>${day}</strong><br>LV Robotics Event`;
+                    dateElement.classList.add('has-event');
+                }
+
+                // Allow user to add custom events by clicking on a date
+                dateElement.addEventListener('click', () => {
+                    const event = prompt('Enter event description:');
+                    const eventTime = prompt('Enter event time (HH:MM, 24-hour format):');
+
+                    // Validate time input
+                    if (event !== null && eventTime !== null) {
+                        const [hour, minute] = eventTime.split(':').map(Number);
+                        if (isNaN(hour) || isNaN(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+                            alert('Please enter a valid time in HH:MM format.');
+                            return;
+                        }
+
+                        // Create a key for the event (YYYY-MM-DD format)
+                        const dateKey = `${year}-${zeroPad(month + 1)}-${zeroPad(day)}`;
+                        events[dateKey] = `${event} at ${eventTime}`; // Store the event
+
+                        // Update the calendar cell with the event
+                        dateElement.setAttribute('data-event', event);
+                        dateElement.innerHTML = `<strong>${day}</strong><br>${event} at ${eventTime}`;
+
+                        // Add confetti effect here
+                        confetti({
+                            particleCount: 100,
+                            spread: 70,
+                            origin: { y: 0.6 }  // Adjust the confetti position
+                        });
+
+                        // Generate a Google Calendar link for the event
+                        const eventStartDateTime = `${year}${zeroPad(month + 1)}${zeroPad(day)}T${zeroPad(hour)}${zeroPad(minute)}00Z`;
+                        const eventEndDateTime = `${year}${zeroPad(month + 1)}${zeroPad(day)}T${zeroPad(hour + 1)}${zeroPad(minute)}00Z`;
+                        const calendarLink = getGoogleCalendarLink(event, eventStartDateTime, eventEndDateTime, 'Custom Location', 'Event added by user');
+                        dateElement.innerHTML += `<br><a href="${calendarLink}" target="_blank">Add to Google Calendar</a>`;
+                    }
+                });
+
+                calendar.appendChild(dateElement);
+            }
+
+            // Add the first few days of the next month to fill the grid (if necessary)
+            const totalDays = firstDay + lastDate;
+            for (let i = 1; i <= 5 && totalDays + i <= 42; i++) {
+                const nextDateElement = document.createElement('div');
+                nextDateElement.className = 'calendar-date';
+                nextDateElement.innerText = i;
+                nextDateElement.style.opacity = '0.5'; // Dimmed effect for next month's days
+                calendar.appendChild(nextDateElement);
+            }
+        }
+
+        // Event listener for previous month button
+        prevMonthBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar(currentDate);
+        });
+
+        // Event listener for next month button
+        nextMonthBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar(currentDate);
+        });
+
+        // Event listener for "Today" button
+        todayBtn.addEventListener('click', () => {
+            currentDate = new Date(); // Reset to today's date
+            renderCalendar(currentDate);
+        });
+
+        // Initial calendar rendering for the current month
+        renderCalendar(currentDate);
+
+        // View switching event listeners (Day, Week, Month, List)
+        document.getElementById('dayView').addEventListener('click', () => {
+            renderDayView();
+            setActiveView('dayView');
+        });
+
+        document.getElementById('weekView').addEventListener('click', () => {
+            renderWeekView();
+            setActiveView('weekView');
+        });
+
+        document.getElementById('monthView').addEventListener('click', () => {
+            renderCalendar(currentDate);
+            setActiveView('monthView');
+        });
+
+        document.getElementById('listView').addEventListener('click', () => {
+            renderListView();
+            setActiveView('listView');
+        });
+
+        // Helper function to set the active view button
+        function setActiveView(viewId) {
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(viewId).classList.add('active');
+        }
+
+        // Render the day view
+        function renderDayView() {
+            calendar.innerHTML = '';
+            const dayKey = `${currentDate.getFullYear()}-${zeroPad(currentDate.getMonth() + 1)}-${zeroPad(currentDate.getDate())}`;
+            const event = events[dayKey] || 'No events for today';
+
+            const dayElement = document.createElement('div');
+            dayElement.className = 'calendar-date';
+            dayElement.style.height = '500px';
+            dayElement.innerHTML = `<strong>Events for ${currentDate.toDateString()}:</strong><br>${event}`;
+            calendar.appendChild(dayElement);
+        }
+
+        // Render the week view
+        function renderWeekView() {
+            calendar.innerHTML = '';
+            const weekStart = new Date(currentDate);
+            weekStart.setDate(currentDate.getDate() - currentDate.getDay()); // Start the week on Sunday
+
+            for (let i = 0; i < 7; i++) {
+                const day = new Date(weekStart);
+                day.setDate(weekStart.getDate() + i);
+                const dayKey = `${day.getFullYear()}-${zeroPad(day.getMonth() + 1)}-${zeroPad(day.getDate())}`;
+                const event = events[dayKey] || 'No Events';
+
+                const weekElement = document.createElement('div');
+                weekElement.className = 'calendar-date';
+                weekElement.style.height = '100px';
+                weekElement.innerHTML = `<strong>${day.toDateString()}:</strong><br>${event}`;
+                calendar.appendChild(weekElement);
+            }
+        }
+
+        // Render the list view
+        function renderListView() {
+            calendar.innerHTML = '';
+            const listElement = document.createElement('div');
+            listElement.style.padding = '20px';
+
+            let eventList = '<strong>Event List:</strong><br>';
+            for (const [date, event] of Object.entries(events)) {
+                eventList += `${date}: ${event}<br>`;
+            }
+
+            listElement.innerHTML = eventList || 'No events scheduled.';
+            calendar.appendChild(listElement);
+        }
+
+        // Function to generate a Google Calendar link for an event
+        function getGoogleCalendarLink(eventTitle, eventStartDateTime, eventEndDateTime, eventLocation, eventDescription) {
+            return `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(eventTitle)}&dates=${eventStartDateTime}/${eventEndDateTime}&details=${encodeURIComponent(eventDescription)}&location=${encodeURIComponent(eventLocation)}&sf=true&output=xml`;
+        }
+    </script>
+</body>
+
+</html>
